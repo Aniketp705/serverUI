@@ -1,15 +1,18 @@
 import time
 import os
 import psutil
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 
-app = Flask(__name__)
+# Define path to React production build directory (frontend/dist)
+DIST_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist'))
+
+app = Flask(__name__, static_folder=DIST_FOLDER, static_url_path='')
 CORS(app)
 
 @app.route('/api/system/stats', methods=['GET'])
 def get_system_stats():
-    cpu_percent = psutil.cpu_percent(interval=None)
+    cpu_percent = psutil.cpu_percent(interval=0.1)
     memory = psutil.virtual_memory()
     disk = psutil.disk_usage('/')
     
@@ -56,6 +59,17 @@ def get_storage():
     ]
     return jsonify({'drives': drives})
 
+# Catch-all route to serve React frontend build files (Single Page Application)
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    elif os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    else:
+        return jsonify({"error": "React production build (frontend/dist) not found. Run 'npm run build' inside frontend folder."}), 404
+
 if __name__ == '__main__':
-    print("Starting Home Server Backend API on port 5000...")
+    print("Starting Home Server Backend & Frontend on port 5000...")
     app.run(host='0.0.0.0', port=5000, debug=True)
