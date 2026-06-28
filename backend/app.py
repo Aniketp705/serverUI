@@ -11,16 +11,21 @@ app = Flask(__name__, static_folder=DIST_FOLDER, static_url_path='')
 CORS(app)
 
 # Authentication credentials
-VALID_USERNAME = "aniket705"
-VALID_PASSWORD = "Aniket@705"
-SESSION_TOKEN = "serverui_auth_token_aniket705_secure"
+USERS = {
+    "aniket705": "Aniket@705",
+    "testuser": "Test@123"
+}
+SESSION_TOKENS = {
+    "aniket705": "serverui_auth_token_aniket705_secure",
+    "testuser": "serverui_auth_token_testuser_secure"
+}
 
 _last_net_io = psutil.net_io_counters()
 _last_net_time = time.time()
 
 def check_auth():
     token = request.headers.get('X-Auth-Token')
-    return token == SESSION_TOKEN
+    return token in SESSION_TOKENS.values()
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -28,8 +33,9 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
-    if username == VALID_USERNAME and password == VALID_PASSWORD:
-        return jsonify({'success': True, 'token': SESSION_TOKEN, 'username': VALID_USERNAME})
+    if username in USERS and USERS[username] == password:
+        token = SESSION_TOKENS[username]
+        return jsonify({'success': True, 'token': token, 'username': username})
     else:
         return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
 
