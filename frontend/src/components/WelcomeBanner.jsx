@@ -1,6 +1,8 @@
 import React from 'react';
 
 export default function WelcomeBanner({ stats }) {
+  const bat = stats?.battery;
+
   return (
     <div className="vision-card welcome-card">
       <div>
@@ -12,6 +14,12 @@ export default function WelcomeBanner({ stats }) {
           Platform: <strong style={{ color: 'var(--accent-cyan)' }}>{stats?.os || 'Linux / Windows'}</strong>
           <br />
           Core Architecture: <strong style={{ color: '#fff' }}>{stats?.cpu?.cores || 1} Threads</strong>
+          {bat && (
+            <>
+              <br />
+              Power Source: <strong style={{ color: 'var(--accent-green)' }}>{bat.percent}% ({bat.status})</strong>
+            </>
+          )}
         </p>
       </div>
 

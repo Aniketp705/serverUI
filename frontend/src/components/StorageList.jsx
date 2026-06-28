@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-export default function StorageList({ drives }) {
+export default function StorageList({ drives, token }) {
   const [selectedPath, setSelectedPath] = useState(null);
   const [browseData, setBrowseData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,9 @@ export default function StorageList({ drives }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/storage/browse?path=${encodeURIComponent(path)}`);
+      const res = await fetch(`/api/storage/browse?path=${encodeURIComponent(path)}`, {
+        headers: { 'X-Auth-Token': token || '' }
+      });
       const data = await res.json();
       if (res.ok) {
         setBrowseData(data);
@@ -49,7 +51,6 @@ export default function StorageList({ drives }) {
 
   const handleParentClick = () => {
     if (!selectedPath) return;
-    // Calculate parent folder path
     const parts = selectedPath.replace(/[/\\]$/, '').split(/[/\\]/);
     if (parts.length <= 1 || (parts.length === 2 && parts[1] === '')) {
       setSelectedPath(null);
@@ -67,7 +68,6 @@ export default function StorageList({ drives }) {
 
   return (
     <div className="vision-card">
-      {/* Partition Cards View */}
       {!selectedPath ? (
         <>
           <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.2rem' }}>
@@ -123,7 +123,6 @@ export default function StorageList({ drives }) {
           </div>
         </>
       ) : (
-        /* File Explorer View */
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

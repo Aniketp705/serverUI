@@ -10,11 +10,34 @@ DIST_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'fro
 app = Flask(__name__, static_folder=DIST_FOLDER, static_url_path='')
 CORS(app)
 
+# Authentication credentials
+VALID_USERNAME = "aniket705"
+VALID_PASSWORD = "Aniket@705"
+SESSION_TOKEN = "serverui_auth_token_aniket705_secure"
+
 _last_net_io = psutil.net_io_counters()
 _last_net_time = time.time()
 
+def check_auth():
+    token = request.headers.get('X-Auth-Token')
+    return token == SESSION_TOKEN
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    username = data.get('username')
+    password = data.get('password')
+
+    if username == VALID_USERNAME and password == VALID_PASSWORD:
+        return jsonify({'success': True, 'token': SESSION_TOKEN, 'username': VALID_USERNAME})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
+
 @app.route('/api/system/stats', methods=['GET'])
 def get_system_stats():
+    if not check_auth():
+        return jsonify({'error': 'Unauthorized access'}), 401
+
     global _last_net_io, _last_net_time
     
     per_cpu = psutil.cpu_percent(interval=0.1, percpu=True)
@@ -41,6 +64,26 @@ def get_system_stats():
     
     boot_time = psutil.boot_time()
     uptime_seconds = time.time() - boot_time
+
+    # Real Battery Telemetry
+    try:
+        battery = psutil.sensors_battery()
+        if battery is not None:
+            battery_info = {
+                'has_battery': True,
+                'percent': round(battery.percent, 1),
+                'power_plugged': battery.power_plugged,
+                'status': 'Charging ⚡' if battery.power_plugged else 'Discharging 🔋'
+            }
+        else:
+            battery_info = {
+                'has_battery': False,
+                'percent': 100,
+                'power_plugged': True,
+                'status': 'AC Power'
+            }
+    except Exception:
+        battery_info = {'has_battery': False, 'percent': 100, 'power_plugged': True, 'status': 'AC Power'}
     
     return jsonify({
         'status': 'online',
@@ -73,11 +116,15 @@ def get_system_stats():
             'total_sent_mb': round(current_net_io.bytes_sent / (1024**2), 1),
             'total_recv_mb': round(current_net_io.bytes_recv / (1024**2), 1)
         },
+        'battery': battery_info,
         'uptime_seconds': int(uptime_seconds)
     })
 
 @app.route('/api/storage', methods=['GET'])
 def get_storage():
+    if not check_auth():
+        return jsonify({'error': 'Unauthorized access'}), 401
+
     drives = []
     try:
         partitions = psutil.disk_partitions(all=False)
@@ -104,6 +151,9 @@ def get_storage():
 
 @app.route('/api/storage/browse', methods=['GET'])
 def browse_storage():
+    if not check_auth():
+        return jsonify({'error': 'Unauthorized access'}), 401
+
     target_path = request.args.get('path', '')
     if not target_path:
         return jsonify({'error': 'No path provided'}), 400
@@ -137,6 +187,9 @@ def browse_storage():
 
 @app.route('/api/processes', methods=['GET'])
 def get_processes():
+    if not check_auth():
+        return jsonify({'error': 'Unauthorized access'}), 401
+
     processes = []
     try:
         for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'memory_info']):
